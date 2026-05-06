@@ -29,14 +29,14 @@ function App() {
   const q = query(
     collection(db, "books"),
     where("userId", "==", user.uid),
-    where("isDeleted", "==", false), 
     orderBy("createdAt", "desc")
   );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
-  }, [user]);
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  });
+  return () => unsubscribe();
+}, [user]);
 
   // --- RESTORED EDIT LOGIC ---
   const handleEditBook = async (id, oldTitle, oldAuthor) => {
@@ -88,9 +88,11 @@ const handleSoftDelete = async () => {
 };
 
   const filteredBooks = books.filter(b => 
+  !b.isDeleted && ( 
     b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
     b.author.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  )
+);
 
   if (!user) return <AuthView />;
 
