@@ -8,6 +8,8 @@ import {
 import AuthView from './components/AuthView';
 
 function App() {
+  const [bookToDelete, setBookToDelete] = useState(null); // For the "Are you sure?" popup
+  const [showTrash, setShowTrash] = useState(false);     // To show the deleted books list
   const [user, setUser] = useState(null);
   const [books, setBooks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,12 +25,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, "books"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
-    );
+  if (!user) return;
+  const q = query(
+    collection(db, "books"),
+    where("userId", "==", user.uid),
+    where("isDeleted", "==", false), 
+    orderBy("createdAt", "desc")
+  );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -61,6 +64,7 @@ function App() {
         title: newBook.title,
         author: newBook.author,
         isRead: false,
+        isDeleted: false,
         createdAt: new Date()
       });
       setNewBook({ title: "", author: "" });
@@ -69,6 +73,19 @@ function App() {
       alert("Error adding book: " + err.message);
     }
   };
+
+const handleSoftDelete = async () => {
+  if (!bookToDelete) return;
+  try {
+    await updateDoc(doc(db, "books", bookToDelete), {
+      isDeleted: true,
+      deletedAt: new Date()
+    });
+    setBookToDelete(null); // Close the confirmation popup
+  } catch (err) {
+    alert("Error moving to trash: " + err.message);
+  }
+};
 
   const filteredBooks = books.filter(b => 
     b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -86,6 +103,9 @@ function App() {
           {showMenu && (
             <div id="dropdown-menu" style={{ display: 'block' }}>
               <div className="menu-user-info">{user.displayName}</div>
+              <button onClick={() => { setShowTrash(true); setShowMenu(false); }}>
+                  🗑️ Recently Deleted
+            </button>
               <button onClick={() => signOut(auth)}>Logout</button>
             </div>
           )}
@@ -118,12 +138,11 @@ function App() {
                 {book.isRead ? "✅ Read" : "📖 Mark Read"}
               </button>
               
-              {/* THE MISSING EDIT BUTTON */}
               <button className="btn-edit" onClick={() => handleEditBook(book.id, book.title, book.author)}>
                 Edit
               </button>
 
-              <button className="btn-delete" onClick={() => confirm("Delete?") && deleteDoc(doc(db, "books", book.id))}>
+              <button className="btn-delete" onClick={() => setBookToDelete(book.id)}>
                 Delete
               </button>
             </div>
@@ -154,6 +173,43 @@ function App() {
           </div>
         </div>
       )}
+
+      {bookToDelete && (
+  <div className="modal" style={{ display: 'block' }}>
+    <div className="modal-content">
+      <h3>Delete Book?</h3>
+      <p>Are you sure you want to move this book to the trash?</p>
+      <div className="btn-group">
+        <button onClick={() => setBookToDelete(null)}>Cancel</button>
+        <button className="btn-delete" onClick={handleSoftDelete}>Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+)}
+
+  {showTrash && (
+  <div className="modal" style={{ display: 'block' }}>
+    <div className="modal-content" style={{ maxWidth: '600px' }}>
+      <span className="close-modal" onClick={() => setShowTrash(false)}>&times;</span>
+      <h3>Recently Deleted</h3>
+      <div id="trash-list">
+        {books.filter(b => b.isDeleted).map(book => (
+          <div key={book.id} className="book-card" style={{ marginBottom: '10px', minHeight: 'auto' }}>
+            <strong>{book.title}</strong>
+            <button 
+              className="btn-read" 
+              onClick={() => updateDoc(doc(db, "books", book.id), { isDeleted: false })}
+            >
+              🔄 Restore Book
+            </button>
+          </div>
+        ))}
+        {books.filter(b => b.isDeleted).length === 0 && <p>Trash is empty!</p>}
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

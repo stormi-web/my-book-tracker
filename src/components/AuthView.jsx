@@ -77,7 +77,7 @@ const AuthView = () => {
           </a>
         )}
       </div> 
-    </div> /* Added this closing div git config --global "sandra" git config --global "quimboale@gmail.com"  */
+    </div> 
   );
 };
 

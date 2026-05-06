@@ -3,13 +3,12 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA4ErxjDsJOPDz9txoNoJm3e9B7nK17xLk",
-  authDomain: "mybooktracker-c0f43.firebaseapp.com",
-  projectId: "mybooktracker-c0f43",
-  storageBucket: "mybooktracker-c0f43.firebasestorage.app",
-  messagingSenderId: "218489295166",
-  appId: "1:218489295166:web:f02e7709ec935f855fa06f",
-  measurementId: "G-26GDYP91B6"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
