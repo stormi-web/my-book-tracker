@@ -86,6 +86,17 @@ const handleSoftDelete = async () => {
   }
 };
 
+// --- PERMANENT DELETE LOGIC ---
+const handlePermanentDelete = async (id) => {
+  // Always good to have a second confirmation for permanent actions
+  if (!window.confirm("This will delete the book forever. Are you sure?")) return;
+  try {
+    await deleteDoc(doc(db, "books", id));
+  } catch (err) {
+    alert("Error deleting permanently: " + err.message);
+  }
+};
+
   const filteredBooks = books.filter(b => 
   !b.isDeleted && ( 
     b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -193,19 +204,42 @@ const handleSoftDelete = async () => {
     <div className="modal-content" style={{ maxWidth: '600px' }}>
       <span className="close-modal" onClick={() => setShowTrash(false)}>&times;</span>
       <h3>Recently Deleted</h3>
-      <div id="trash-list">
+      
+      {/* This div handles the scrolling */}
+      <div id="trash-list" style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
         {books.filter(b => b.isDeleted).map(book => (
-          <div key={book.id} className="book-card" style={{ marginBottom: '10px', minHeight: 'auto' }}>
-            <strong>{book.title}</strong>
-            <button 
-              className="btn-read" 
-              onClick={() => updateDoc(doc(db, "books", book.id), { isDeleted: false })}
-            >
-              🔄 Restore Book
-            </button>
+          <div key={book.id} className="book-card" style={{ marginBottom: '10px', minHeight: 'auto', padding: '15px' }}>
+            <div className="book-info" style={{ marginBottom: '10px' }}>
+              <strong>{book.title}</strong><br/>
+              <small>by {book.author}</small>
+            </div>
+            
+            <div className="btn-group">
+              {/* Restore Button */}
+              <button 
+                className="btn-read" 
+                style={{ flex: 2 }}
+                onClick={() => updateDoc(doc(db, "books", book.id), { isDeleted: false })}
+              >
+                🔄 Restore
+              </button>
+
+              {/* Permanent Delete Button */}
+              <button 
+                className="btn-delete" 
+                style={{ flex: 1, fontSize: '0.75rem' }} 
+                onClick={() => handlePermanentDelete(book.id)}
+              >
+                🗑️ Delete
+              </button>
+            </div>
           </div>
         ))}
-        {books.filter(b => b.isDeleted).length === 0 && <p>Trash is empty!</p>}
+        
+        {/* Shows if nothing is deleted */}
+        {books.filter(b => b.isDeleted).length === 0 && (
+          <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Trash is empty!</p>
+        )}
       </div>
     </div>
   </div>
