@@ -17,8 +17,6 @@ function App() {
   const [showModal, setShowModal] = useState(false);     // Controls the "Add New Book" Modal
   const [showMenu, setShowMenu] = useState(false);       // Controls the Hamburger dropdown
   const [newBook, setNewBook] = useState({ title: "", author: "" }); // Form data for adding a book
-  const [editingBook, setEditingBook] = useState(null); 
-  const [editForm, setEditForm] = useState({ title: "", author: "" });
 
   // --- 2. AUTHENTICATION LISTENER ---
   // Runs once on load to see if a user is already logged in
@@ -47,26 +45,23 @@ function App() {
 
   // --- 4. BOOK ACTIONS (EDIT, ADD, DELETE) ---
 
- // 1. This function opens the Edit modal and pre-fills it with the current book details
-const openEditModal = (book) => {
-  setEditingBook(book);
-  setEditForm({ title: book.title, author: book.author });
-};
+  // Edits book info using simple browser prompts
+  const handleEditBook = async (id, oldTitle, oldAuthor) => {
+    const newTitle = prompt("Update Book Title:", oldTitle);
+    if (newTitle === null || newTitle.trim() === "") return;
+    
+    const newAuthor = prompt("Update Author Name:", oldAuthor);
+    if (newAuthor === null || newAuthor.trim() === "") return;
 
-// Saves the changes from the modal to Firebase
-const handleUpdateBook = async () => {
-  if (!editForm.title || !editForm.author) return alert("Fields cannot be empty");
-  
-  try {
-    await updateDoc(doc(db, "books", editingBook.id), {
-      title: editForm.title.trim(),
-      author: editForm.author.trim()
-    });
-    setEditingBook(null); // Close the modal
-  } catch (err) {
-    alert("Error updating: " + err.message);
-  }
-};
+    try {
+      await updateDoc(doc(db, "books", id), {
+        title: newTitle.trim(),
+        author: newAuthor.trim()
+      });
+    } catch (err) {
+      alert("Error updating book: " + err.message);
+    }
+  };
 
   // Saves a new book with 'isDeleted: false' so it appears in the main list
   const handleAddBook = async () => {
@@ -161,7 +156,7 @@ const handleUpdateBook = async () => {
                 {book.isRead ? "✅ Read" : "📖 Mark Read"}
               </button>
               
-              <button className="btn-edit" onClick={() => openEditModal(book)}>
+              <button className="btn-edit" onClick={() => handleEditBook(book.id, book.title, book.author)}>
                 Edit
               </button>
 
@@ -214,34 +209,6 @@ const handleUpdateBook = async () => {
         </div>
       )}
 
-        {/* MODAL: EDIT BOOK */}
-{editingBook && (
-  <div className="modal" style={{ display: 'block' }}>
-    <div className="modal-content">
-      <span className="close-modal" onClick={() => setEditingBook(null)}>&times;</span>
-      <h3>Update Book Info</h3>
-      
-      <label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Book Title</label>
-      <input 
-        type="text" 
-        value={editForm.title}
-        onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-      />
-      
-      <label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Author</label>
-      <input 
-        type="text" 
-        value={editForm.author}
-        onChange={(e) => setEditForm({...editForm, author: e.target.value})}
-      />
-      
-      <div className="btn-group">
-        <button onClick={() => setEditingBook(null)}>Cancel</button>
-        <button id="add-book-btn" style={{margin: 0}} onClick={handleUpdateBook}>Save Changes</button>
-      </div>
-    </div>
-  </div>
-)}
       {/* MODAL: RECENTLY DELETED (Trash Bin) */}
       {showTrash && (
         <div className="modal" style={{ display: 'block' }}>
