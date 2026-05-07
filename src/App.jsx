@@ -17,8 +17,8 @@ function App() {
   const [showModal, setShowModal] = useState(false);     // Controls the "Add New Book" Modal
   const [showMenu, setShowMenu] = useState(false);       // Controls the Hamburger dropdown
   const [newBook, setNewBook] = useState({ title: "", author: "" }); // Form data for adding a book
-  const [bookToEdit, setBookToEdit] = useState(null); // Stores the book object currently being edited
-  const [editBookForm, setEditBookForm] = useState({ title: "", author: "" }); // Stores the input values
+  const [editingBook, setEditingBook] = useState(null); 
+  const [editForm, setEditForm] = useState({ title: "", author: "" });
 
   // --- 2. AUTHENTICATION LISTENER ---
   // Runs once on load to see if a user is already logged in
@@ -48,25 +48,23 @@ function App() {
   // --- 4. BOOK ACTIONS (EDIT, ADD, DELETE) ---
 
  // 1. This function opens the Edit modal and pre-fills it with the current book details
-const handleOpenEditModal = (book) => {
-  setBookToEdit(book);
-  setEditBookForm({ title: book.title, author: book.author });
+const openEditModal = (book) => {
+  setEditingBook(book);
+  setEditForm({ title: book.title, author: book.author });
 };
 
-// 2. This function actually updates the document in Firestore when you click "Save"
-const handleSaveEdit = async () => {
-  if (!editBookForm.title.trim() || !editBookForm.author.trim()) {
-    return alert("Fields cannot be empty");
-  }
-
+// Saves the changes from the modal to Firebase
+const handleUpdateBook = async () => {
+  if (!editForm.title || !editForm.author) return alert("Fields cannot be empty");
+  
   try {
-    await updateDoc(doc(db, "books", bookToEdit.id), {
-      title: editBookForm.title.trim(),
-      author: editBookForm.author.trim()
+    await updateDoc(doc(db, "books", editingBook.id), {
+      title: editForm.title.trim(),
+      author: editForm.author.trim()
     });
-    setBookToEdit(null); // Close the modal on success
+    setEditingBook(null); // Close the modal
   } catch (err) {
-    alert("Error updating book: " + err.message);
+    alert("Error updating: " + err.message);
   }
 };
 
@@ -163,7 +161,7 @@ const handleSaveEdit = async () => {
                 {book.isRead ? "✅ Read" : "📖 Mark Read"}
               </button>
               
-              <button className="btn-edit" onClick={() => handleOpenEditModal(book)}>
+              <button className="btn-edit" onClick={() => openEditModal(book)}>
                 Edit
               </button>
 
@@ -217,36 +215,33 @@ const handleSaveEdit = async () => {
       )}
 
         {/* MODAL: EDIT BOOK */}
-{bookToEdit && (
+{editingBook && (
   <div className="modal" style={{ display: 'block' }}>
     <div className="modal-content">
-      <span className="close-modal" onClick={() => setBookToEdit(null)}>&times;</span>
-      <h3>Edit Book Details</h3>
+      <span className="close-modal" onClick={() => setEditingBook(null)}>&times;</span>
+      <h3>Update Book Info</h3>
       
-      <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Book Title</label>
+      <label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Book Title</label>
       <input 
         type="text" 
-        placeholder="Book Title" 
-        value={editBookForm.title}
-        onChange={(e) => setEditBookForm({ ...editBookForm, title: e.target.value })}
+        value={editForm.title}
+        onChange={(e) => setEditForm({...editForm, title: e.target.value})}
       />
       
-      <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Author Name</label>
+      <label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Author</label>
       <input 
         type="text" 
-        placeholder="Author" 
-        value={editBookForm.author}
-        onChange={(e) => setEditBookForm({ ...editBookForm, author: e.target.value })}
+        value={editForm.author}
+        onChange={(e) => setEditForm({...editForm, author: e.target.value})}
       />
       
-      <div className="btn-group" style={{ marginTop: '10px' }}>
-        <button onClick={() => setBookToEdit(null)}>Cancel</button>
-        <button id="add-book-btn" style={{ margin: 0 }} onClick={handleSaveEdit}>Save Changes</button>
+      <div className="btn-group">
+        <button onClick={() => setEditingBook(null)}>Cancel</button>
+        <button id="add-book-btn" style={{margin: 0}} onClick={handleUpdateBook}>Save Changes</button>
       </div>
     </div>
   </div>
 )}
-
       {/* MODAL: RECENTLY DELETED (Trash Bin) */}
       {showTrash && (
         <div className="modal" style={{ display: 'block' }}>
