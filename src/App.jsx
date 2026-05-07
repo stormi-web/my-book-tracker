@@ -8,15 +8,20 @@ import {
 import AuthView from './components/AuthView';
 
 function App() {
-  const [bookToDelete, setBookToDelete] = useState(null); // For the "Are you sure?" popup
-  const [showTrash, setShowTrash] = useState(false);     // To show the deleted books list
-  const [user, setUser] = useState(null);
-  const [books, setBooks] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [newBook, setNewBook] = useState({ title: "", author: "" });
+  // --- 1. STATE MANAGEMENT ---
+  const [bookToDelete, setBookToDelete] = useState(null); // Stores ID of book user clicked "Delete" on
+  const [showTrash, setShowTrash] = useState(false);     // Controls visibility of the "Recently Deleted" Modal
+  const [user, setUser] = useState(null);                // Stores the currently logged-in user
+  const [books, setBooks] = useState([]);               // Stores ALL books fetched from Firestore
+  const [searchTerm, setSearchTerm] = useState("");      // Stores current search text
+  const [showModal, setShowModal] = useState(false);     // Controls the "Add New Book" Modal
+  const [showMenu, setShowMenu] = useState(false);       // Controls the Hamburger dropdown
+  const [newBook, setNewBook] = useState({ title: "", author: "" }); // Form data for adding a book
+  const [bookToEdit, setBookToEdit] = useState(null); // Stores the book object currently being edited
+  const [editBookForm, setEditBookForm] = useState({ title: "", author: "" }); // Stores the input values
 
+  // --- 2. AUTHENTICATION LISTENER ---
+  // Runs once on load to see if a user is already logged in
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -24,38 +29,48 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // --- 3. FIRESTORE REAL-TIME LISTENER ---
+  // Listens for any changes in the "books" collection for the specific user
   useEffect(() => {
-  if (!user) return;
-  const q = query(
-    collection(db, "books"),
-    where("userId", "==", user.uid),
-    orderBy("createdAt", "desc")
-  );
+    if (!user) return;
+    const q = query(
+      collection(db, "books"),
+      where("userId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  });
-  return () => unsubscribe();
-}, [user]);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, [user]);
 
-  // --- RESTORED EDIT LOGIC ---
-  const handleEditBook = async (id, oldTitle, oldAuthor) => {
-    const newTitle = prompt("Update Book Title:", oldTitle);
-    if (newTitle === null || newTitle.trim() === "") return;
-    
-    const newAuthor = prompt("Update Author Name:", oldAuthor);
-    if (newAuthor === null || newAuthor.trim() === "") return;
+  // --- 4. BOOK ACTIONS (EDIT, ADD, DELETE) ---
 
-    try {
-      await updateDoc(doc(db, "books", id), {
-        title: newTitle.trim(),
-        author: newAuthor.trim()
-      });
-    } catch (err) {
-      alert("Error updating book: " + err.message);
-    }
-  };
+ // 1. This function opens the Edit modal and pre-fills it with the current book details
+const handleOpenEditModal = (book) => {
+  setBookToEdit(book);
+  setEditBookForm({ title: book.title, author: book.author });
+};
 
+// 2. This function actually updates the document in Firestore when you click "Save"
+const handleSaveEdit = async () => {
+  if (!editBookForm.title.trim() || !editBookForm.author.trim()) {
+    return alert("Fields cannot be empty");
+  }
+
+  try {
+    await updateDoc(doc(db, "books", bookToEdit.id), {
+      title: editBookForm.title.trim(),
+      author: editBookForm.author.trim()
+    });
+    setBookToEdit(null); // Close the modal on success
+  } catch (err) {
+    alert("Error updating book: " + err.message);
+  }
+};
+
+  // Saves a new book with 'isDeleted: false' so it appears in the main list
   const handleAddBook = async () => {
     if (!newBook.title || !newBook.author) return alert("Fill all fields");
     try {
@@ -64,7 +79,7 @@ function App() {
         title: newBook.title,
         author: newBook.author,
         isRead: false,
-        isDeleted: false,
+        isDeleted: false, // Required for the filtering logic
         createdAt: new Date()
       });
       setNewBook({ title: "", author: "" });
@@ -74,30 +89,35 @@ function App() {
     }
   };
 
-const handleSoftDelete = async () => {
-  if (!bookToDelete) return;
-  try {
-    await updateDoc(doc(db, "books", bookToDelete), {
-      isDeleted: true,
-      deletedAt: new Date()
-    });
-    setBookToDelete(null); // Close the confirmation popup
-  } catch (err) {
-    alert("Error moving to trash: " + err.message);
-  }
-};
+  // "Soft Delete": Doesn't actually remove the data, just hides it from view
+  const handleSoftDelete = async () => {
+    if (!bookToDelete) return;
+    try {
+      await updateDoc(doc(db, "books", bookToDelete), {
+        isDeleted: true,
+        deletedAt: new Date()
+      });
+      setBookToDelete(null); // Closes the "Are u sure?" popup
+    } catch (err) {
+      alert("Error moving to trash: " + err.message);
+    }
+  };
 
+  // --- 5. SEARCH & VIEW FILTERING ---
+  // This logic determines which books the user sees in the main grid
   const filteredBooks = books.filter(b => 
-  !b.isDeleted && ( 
-    b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    b.author.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-);
+    !b.isDeleted && ( // RULE: Must NOT be marked as deleted
+      b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      b.author.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
 
+  // If nobody is logged in, show the Login/Signup screen
   if (!user) return <AuthView />;
 
   return (
     <div id="app">
+      {/* HEADER: Contains Logo and Hamburger Menu */}
       <header className="header-bar">
         <h2>📚 MyBookTracker</h2>
         <div style={{ position: 'relative' }}>
@@ -107,13 +127,14 @@ const handleSoftDelete = async () => {
               <div className="menu-user-info">{user.displayName}</div>
               <button onClick={() => { setShowTrash(true); setShowMenu(false); }}>
                   🗑️ Recently Deleted
-            </button>
+              </button>
               <button onClick={() => signOut(auth)}>Logout</button>
             </div>
           )}
         </div>
       </header>
 
+      {/* SEARCH BAR */}
       <div className="dashboard-controls">
         <h3>Your Collection ({books.length})</h3>
         <div className="search-container">
@@ -125,6 +146,7 @@ const handleSoftDelete = async () => {
         </div>
       </div>
 
+      {/* MAIN BOOK GRID */}
       <div id="book-list">
         {filteredBooks.map(book => (
           <div key={book.id} className="book-card">
@@ -133,6 +155,7 @@ const handleSoftDelete = async () => {
               <small>by {book.author}</small>
             </div>
             <div className="btn-group">
+              {/* Toggle Read/Unread status in Firestore */}
               <button 
                 className={book.isRead ? "btn-read" : "btn-unread"}
                 onClick={() => updateDoc(doc(db, "books", book.id), { isRead: !book.isRead })}
@@ -140,10 +163,11 @@ const handleSoftDelete = async () => {
                 {book.isRead ? "✅ Read" : "📖 Mark Read"}
               </button>
               
-              <button className="btn-edit" onClick={() => handleEditBook(book.id, book.title, book.author)}>
+              <button className="btn-edit" onClick={() => handleOpenEditModal(book)}>
                 Edit
               </button>
 
+              {/* Triggers the "Are you sure?" confirmation popup */}
               <button className="btn-delete" onClick={() => setBookToDelete(book.id)}>
                 Delete
               </button>
@@ -152,8 +176,10 @@ const handleSoftDelete = async () => {
         ))}
       </div>
 
+      {/* FAB: Floating Action Button to open "Add Book" modal */}
       <button className="fab" onClick={() => setShowModal(true)}>+</button>
 
+      {/* MODAL: ADD NEW BOOK */}
       {showModal && (
         <div className="modal" style={{ display: 'block' }}>
           <div className="modal-content">
@@ -176,42 +202,77 @@ const handleSoftDelete = async () => {
         </div>
       )}
 
+      {/* MODAL: DELETE CONFIRMATION (Are u sure?) */}
       {bookToDelete && (
+        <div className="modal" style={{ display: 'block' }}>
+          <div className="modal-content">
+            <h3>Delete Book?</h3>
+            <p>Are you sure you want to move this book to the trash?</p>
+            <div className="btn-group">
+              <button onClick={() => setBookToDelete(null)}>Cancel</button>
+              <button className="btn-delete" onClick={handleSoftDelete}>Yes, Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+        {/* MODAL: EDIT BOOK */}
+{bookToEdit && (
   <div className="modal" style={{ display: 'block' }}>
     <div className="modal-content">
-      <h3>Delete Book?</h3>
-      <p>Are you sure you want to move this book to the trash?</p>
-      <div className="btn-group">
-        <button onClick={() => setBookToDelete(null)}>Cancel</button>
-        <button className="btn-delete" onClick={handleSoftDelete}>Yes, Delete</button>
+      <span className="close-modal" onClick={() => setBookToEdit(null)}>&times;</span>
+      <h3>Edit Book Details</h3>
+      
+      <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Book Title</label>
+      <input 
+        type="text" 
+        placeholder="Book Title" 
+        value={editBookForm.title}
+        onChange={(e) => setEditBookForm({ ...editBookForm, title: e.target.value })}
+      />
+      
+      <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Author Name</label>
+      <input 
+        type="text" 
+        placeholder="Author" 
+        value={editBookForm.author}
+        onChange={(e) => setEditBookForm({ ...editBookForm, author: e.target.value })}
+      />
+      
+      <div className="btn-group" style={{ marginTop: '10px' }}>
+        <button onClick={() => setBookToEdit(null)}>Cancel</button>
+        <button id="add-book-btn" style={{ margin: 0 }} onClick={handleSaveEdit}>Save Changes</button>
       </div>
     </div>
   </div>
 )}
 
-  {showTrash && (
-  <div className="modal" style={{ display: 'block' }}>
-    <div className="modal-content" style={{ maxWidth: '600px' }}>
-      <span className="close-modal" onClick={() => setShowTrash(false)}>&times;</span>
-      <h3>Recently Deleted</h3>
-      <div id="trash-list">
-        {books.filter(b => b.isDeleted).map(book => (
-          <div key={book.id} className="book-card" style={{ marginBottom: '10px', minHeight: 'auto' }}>
-            <strong>{book.title}</strong>
-            <button 
-              className="btn-read" 
-              onClick={() => updateDoc(doc(db, "books", book.id), { isDeleted: false })}
-            >
-              🔄 Restore Book
-            </button>
+      {/* MODAL: RECENTLY DELETED (Trash Bin) */}
+      {showTrash && (
+        <div className="modal" style={{ display: 'block' }}>
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <span className="close-modal" onClick={() => setShowTrash(false)}>&times;</span>
+            <h3>Recently Deleted</h3>
+            <div id="trash-list">
+              {/* Shows only books where isDeleted is true */}
+              {books.filter(b => b.isDeleted).map(book => (
+                <div key={book.id} className="book-card" style={{ marginBottom: '10px', minHeight: 'auto' }}>
+                  <strong>{book.title}</strong>
+                  {/* Sets isDeleted back to false to move it to the main dashboard */}
+                  <button 
+                    className="btn-read" 
+                    onClick={() => updateDoc(doc(db, "books", book.id), { isDeleted: false })}
+                  >
+                    🔄 Restore Book
+                  </button>
+                </div>
+              ))}
+              {/* Fallback if trash is empty */}
+              {books.filter(b => b.isDeleted).length === 0 && <p>Trash is empty!</p>}
+            </div>
           </div>
-        ))}
-        {books.filter(b => b.isDeleted).length === 0 && <p>Trash is empty!</p>}
-      </div>
-    </div>
-  </div>
-)}
-
+        </div>
+      )}
     </div>
   );
 }
