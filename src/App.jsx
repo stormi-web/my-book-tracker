@@ -164,8 +164,8 @@ const handlePermanentDelete = async (id) => {
                 {book.isRead ? "✅ Read" : "📖 Mark Read"}
               </button>
               
-              <button className="btn-edit" onClick={() => handleEditBook(book.id, book.title, book.author)}>
-                Edit
+              <button className="btn-edit" onClick={() => handleOpenEdit(book)}>
+                 Edit
               </button>
 
               <button className="btn-delete" onClick={() => setBookToDelete(book.id)}>
@@ -240,12 +240,10 @@ const handlePermanentDelete = async (id) => {
 
               {/* Permanent Delete Button */}
               <button 
-                className="btn-delete" 
-                style={{ flex: 1, fontSize: '0.75rem' }} 
-                onClick={() => handlePermanentDelete(book.id)}
-              >
-                🗑️ Delete
-              </button>
+                  className="btn-delete" 
+                    style={{ flex: 1, fontSize: '0.75rem' }} 
+                    onClick={() => setBookToPermanentDelete(book.id)} >
+                      🗑️ Delete </button>
             </div>
           </div>
         ))}
