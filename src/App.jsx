@@ -16,6 +16,9 @@ function App() {
   const [showModal, setShowModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [newBook, setNewBook] = useState({ title: "", author: "" });
+  const [bookToEdit, setBookToEdit] = useState(null); 
+  const [editForm, setEditForm] = useState({ title: "", author: "" });
+  const [bookToPermanentDelete, setBookToPermanentDelete] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -38,22 +41,33 @@ function App() {
   return () => unsubscribe();
 }, [user]);
 
-  const handleEditBook = async (id, oldTitle, oldAuthor) => {
-    const newTitle = prompt("Update Book Title:", oldTitle);
-    if (newTitle === null || newTitle.trim() === "") return;
-    
-    const newAuthor = prompt("Update Author Name:", oldAuthor);
-    if (newAuthor === null || newAuthor.trim() === "") return;
+  // --- CUSTOM EDIT LOGIC ---
+const handleOpenEdit = (book) => {
+  setBookToEdit(book);
+  setEditForm({ title: book.title, author: book.author });
+};
 
-    try {
-      await updateDoc(doc(db, "books", id), {
-        title: newTitle.trim(),
-        author: newAuthor.trim()
-      });
-    } catch (err) {
-      alert("Error updating book: " + err.message);
-    }
-  };
+const handleSaveEdit = async () => {
+  try {
+    await updateDoc(doc(db, "books", bookToEdit.id), {
+      title: editForm.title.trim(),
+      author: editForm.author.trim()
+    });
+    setBookToEdit(null);
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+};
+
+// --- PERMANENT DELETE LOGIC ---
+const handleFinalDelete = async () => {
+  try {
+    await deleteDoc(doc(db, "books", bookToPermanentDelete));
+    setBookToPermanentDelete(null);
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+};
 
   const handleAddBook = async () => {
     if (!newBook.title || !newBook.author) return alert("Fill all fields");
@@ -240,6 +254,43 @@ const handlePermanentDelete = async (id) => {
         {books.filter(b => b.isDeleted).length === 0 && (
           <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Trash is empty!</p>
         )}
+      </div>
+    </div>
+  </div>
+)}
+
+{/* CUSTOM EDIT MODAL */}
+{bookToEdit && (
+  <div className="modal" style={{ display: 'block' }}>
+    <div className="modal-content">
+      <h3>Update Book</h3>
+      <input 
+        type="text" 
+        value={editForm.title}
+        onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+      />
+      <input 
+        type="text" 
+        value={editForm.author}
+        onChange={(e) => setEditForm({...editForm, author: e.target.value})}
+      />
+      <div className="btn-group">
+        <button onClick={() => setBookToEdit(null)}>Cancel</button>
+        <button id="add-book-btn" style={{margin: 0}} onClick={handleSaveEdit}>Save Changes</button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* PERMANENT DELETE CONFIRMATION */}
+{bookToPermanentDelete && (
+  <div className="modal" style={{ display: 'block' }}>
+    <div className="modal-content">
+      <h3>Delete Permanently?</h3>
+      <p>This action cannot be undone. Are you sure?</p>
+      <div className="btn-group">
+        <button onClick={() => setBookToPermanentDelete(null)}>Cancel</button>
+        <button className="btn-delete" onClick={handleFinalDelete}>Yes, Delete Forever</button>
       </div>
     </div>
   </div>
