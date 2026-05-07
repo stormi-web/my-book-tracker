@@ -8,18 +8,15 @@ import {
 import AuthView from './components/AuthView';
 
 function App() {
-  // --- 1. STATE MANAGEMENT ---
-  const [bookToDelete, setBookToDelete] = useState(null); // Stores ID of book user clicked "Delete" on
-  const [showTrash, setShowTrash] = useState(false);     // Controls visibility of the "Recently Deleted" Modal
-  const [user, setUser] = useState(null);                // Stores the currently logged-in user
-  const [books, setBooks] = useState([]);               // Stores ALL books fetched from Firestore
-  const [searchTerm, setSearchTerm] = useState("");      // Stores current search text
-  const [showModal, setShowModal] = useState(false);     // Controls the "Add New Book" Modal
-  const [showMenu, setShowMenu] = useState(false);       // Controls the Hamburger dropdown
-  const [newBook, setNewBook] = useState({ title: "", author: "" }); // Form data for adding a book
+  const [bookToDelete, setBookToDelete] = useState(null); 
+  const [showTrash, setShowTrash] = useState(false);     // To show the deleted books list
+  const [user, setUser] = useState(null);
+  const [books, setBooks] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [newBook, setNewBook] = useState({ title: "", author: "" });
 
-  // --- 2. AUTHENTICATION LISTENER ---
-  // Runs once on load to see if a user is already logged in
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -27,25 +24,20 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- 3. FIRESTORE REAL-TIME LISTENER ---
-  // Listens for any changes in the "books" collection for the specific user
   useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, "books"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
-    );
+  if (!user) return;
+  const q = query(
+    collection(db, "books"),
+    where("userId", "==", user.uid),
+    orderBy("createdAt", "desc")
+  );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
-  }, [user]);
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  });
+  return () => unsubscribe();
+}, [user]);
 
-  // --- 4. BOOK ACTIONS (EDIT, ADD, DELETE) ---
-
-  // Edits book info using simple browser prompts
   const handleEditBook = async (id, oldTitle, oldAuthor) => {
     const newTitle = prompt("Update Book Title:", oldTitle);
     if (newTitle === null || newTitle.trim() === "") return;
@@ -63,7 +55,6 @@ function App() {
     }
   };
 
-  // Saves a new book with 'isDeleted: false' so it appears in the main list
   const handleAddBook = async () => {
     if (!newBook.title || !newBook.author) return alert("Fill all fields");
     try {
@@ -72,7 +63,7 @@ function App() {
         title: newBook.title,
         author: newBook.author,
         isRead: false,
-        isDeleted: false, // Required for the filtering logic
+        isDeleted: false,
         createdAt: new Date()
       });
       setNewBook({ title: "", author: "" });
@@ -82,35 +73,30 @@ function App() {
     }
   };
 
-  // "Soft Delete": Doesn't actually remove the data, just hides it from view
-  const handleSoftDelete = async () => {
-    if (!bookToDelete) return;
-    try {
-      await updateDoc(doc(db, "books", bookToDelete), {
-        isDeleted: true,
-        deletedAt: new Date()
-      });
-      setBookToDelete(null); // Closes the "Are u sure?" popup
-    } catch (err) {
-      alert("Error moving to trash: " + err.message);
-    }
-  };
+const handleSoftDelete = async () => {
+  if (!bookToDelete) return;
+  try {
+    await updateDoc(doc(db, "books", bookToDelete), {
+      isDeleted: true,
+      deletedAt: new Date()
+    });
+    setBookToDelete(null); 
+  } catch (err) {
+    alert("Error moving to trash: " + err.message);
+  }
+};
 
-  // --- 5. SEARCH & VIEW FILTERING ---
-  // This logic determines which books the user sees in the main grid
   const filteredBooks = books.filter(b => 
-    !b.isDeleted && ( // RULE: Must NOT be marked as deleted
-      b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      b.author.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  !b.isDeleted && ( 
+    b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    b.author.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+);
 
-  // If nobody is logged in, show the Login/Signup screen
   if (!user) return <AuthView />;
 
   return (
     <div id="app">
-      {/* HEADER: Contains Logo and Hamburger Menu */}
       <header className="header-bar">
         <h2>📚 MyBookTracker</h2>
         <div style={{ position: 'relative' }}>
@@ -120,14 +106,13 @@ function App() {
               <div className="menu-user-info">{user.displayName}</div>
               <button onClick={() => { setShowTrash(true); setShowMenu(false); }}>
                   🗑️ Recently Deleted
-              </button>
+            </button>
               <button onClick={() => signOut(auth)}>Logout</button>
             </div>
           )}
         </div>
       </header>
 
-      {/* SEARCH BAR */}
       <div className="dashboard-controls">
         <h3>Your Collection ({books.length})</h3>
         <div className="search-container">
@@ -139,7 +124,6 @@ function App() {
         </div>
       </div>
 
-      {/* MAIN BOOK GRID */}
       <div id="book-list">
         {filteredBooks.map(book => (
           <div key={book.id} className="book-card">
@@ -148,7 +132,6 @@ function App() {
               <small>by {book.author}</small>
             </div>
             <div className="btn-group">
-              {/* Toggle Read/Unread status in Firestore */}
               <button 
                 className={book.isRead ? "btn-read" : "btn-unread"}
                 onClick={() => updateDoc(doc(db, "books", book.id), { isRead: !book.isRead })}
@@ -160,7 +143,6 @@ function App() {
                 Edit
               </button>
 
-              {/* Triggers the "Are you sure?" confirmation popup */}
               <button className="btn-delete" onClick={() => setBookToDelete(book.id)}>
                 Delete
               </button>
@@ -169,10 +151,8 @@ function App() {
         ))}
       </div>
 
-      {/* FAB: Floating Action Button to open "Add Book" modal */}
       <button className="fab" onClick={() => setShowModal(true)}>+</button>
 
-      {/* MODAL: ADD NEW BOOK */}
       {showModal && (
         <div className="modal" style={{ display: 'block' }}>
           <div className="modal-content">
@@ -195,46 +175,41 @@ function App() {
         </div>
       )}
 
-      {/* MODAL: DELETE CONFIRMATION (Are u sure?) */}
       {bookToDelete && (
-        <div className="modal" style={{ display: 'block' }}>
-          <div className="modal-content">
-            <h3>Delete Book?</h3>
-            <p>Are you sure you want to move this book to the trash?</p>
-            <div className="btn-group">
-              <button onClick={() => setBookToDelete(null)}>Cancel</button>
-              <button className="btn-delete" onClick={handleSoftDelete}>Yes, Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+  <div className="modal" style={{ display: 'block' }}>
+    <div className="modal-content">
+      <h3>Delete Book?</h3>
+      <p>Are you sure you want to move this book to the trash?</p>
+      <div className="btn-group">
+        <button onClick={() => setBookToDelete(null)}>Cancel</button>
+        <button className="btn-delete" onClick={handleSoftDelete}>Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+)}
 
-      {/* MODAL: RECENTLY DELETED (Trash Bin) */}
-      {showTrash && (
-        <div className="modal" style={{ display: 'block' }}>
-          <div className="modal-content" style={{ maxWidth: '600px' }}>
-            <span className="close-modal" onClick={() => setShowTrash(false)}>&times;</span>
-            <h3>Recently Deleted</h3>
-            <div id="trash-list">
-              {/* Shows only books where isDeleted is true */}
-              {books.filter(b => b.isDeleted).map(book => (
-                <div key={book.id} className="book-card" style={{ marginBottom: '10px', minHeight: 'auto' }}>
-                  <strong>{book.title}</strong>
-                  {/* Sets isDeleted back to false to move it to the main dashboard */}
-                  <button 
-                    className="btn-read" 
-                    onClick={() => updateDoc(doc(db, "books", book.id), { isDeleted: false })}
-                  >
-                    🔄 Restore Book
-                  </button>
-                </div>
-              ))}
-              {/* Fallback if trash is empty */}
-              {books.filter(b => b.isDeleted).length === 0 && <p>Trash is empty!</p>}
-            </div>
+  {showTrash && (
+  <div className="modal" style={{ display: 'block' }}>
+    <div className="modal-content" style={{ maxWidth: '600px' }}>
+      <span className="close-modal" onClick={() => setShowTrash(false)}>&times;</span>
+      <h3>Recently Deleted</h3>
+      <div id="trash-list">
+        {books.filter(b => b.isDeleted).map(book => (
+          <div key={book.id} className="book-card" style={{ marginBottom: '10px', minHeight: 'auto' }}>
+            <strong>{book.title}</strong>
+            <button 
+              className="btn-read" 
+              onClick={() => updateDoc(doc(db, "books", book.id), { isDeleted: false })}
+            >
+              🔄 Restore Book
+            </button>
           </div>
-        </div>
-      )}
+        ))}
+        {books.filter(b => b.isDeleted).length === 0 && <p>Trash is empty!</p>}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
