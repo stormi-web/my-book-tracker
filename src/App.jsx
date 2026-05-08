@@ -9,7 +9,7 @@ import AuthView from './components/AuthView';
 
 function App() {
   const [bookToDelete, setBookToDelete] = useState(null); 
-  const [showTrash, setShowTrash] = useState(false);     // To show the deleted books list
+  const [showTrash, setShowTrash] = useState(false);
   const [user, setUser] = useState(null);
   const [books, setBooks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,13 +19,8 @@ function App() {
   const [bookToEdit, setBookToEdit] = useState(null); 
   const [editForm, setEditForm] = useState({ title: "", author: "" });
   const [bookToPermanentDelete, setBookToPermanentDelete] = useState(null);
-  const totalBooks = books.filter(b => !b.isDeleted).length;
-  const readBooks = books.filter(b => !b.isDeleted && b.isRead).length;
-  const unreadBooks = totalBooks - readBooks;
-  const completionRate = totalBooks > 0 ? Math.round((readBooks / totalBooks) * 100) : 0;
 
-  if (!user) return <AuthView />;
-
+  // --- 1. AUTH EFFECT ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -33,19 +28,74 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // --- 2. DATA EFFECT ---
   useEffect(() => {
-  if (!user) return;
-  const q = query(
-    collection(db, "books"),
-    where("userId", "==", user.uid),
-    orderBy("createdAt", "desc")
+    if (!user) return;
+    const q = query(
+      collection(db, "books"),
+      where("userId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  // --- 3. HELPER FUNCTIONS (The missing logic) ---
+  const handleAddBook = async () => {
+    if (!newBook.title || !newBook.author) return alert("Fill all fields");
+    await addDoc(collection(db, "books"), {
+      userId: user.uid,
+      title: newBook.title,
+      author: newBook.author,
+      isRead: false,
+      isDeleted: false,
+      createdAt: new Date()
+    });
+    setNewBook({ title: "", author: "" });
+    setShowModal(false);
+  };
+
+  const handleOpenEdit = (book) => {
+    setBookToEdit(book);
+    setEditForm({ title: book.title, author: book.author });
+  };
+
+  const handleSaveEdit = async () => {
+    await updateDoc(doc(db, "books", bookToEdit.id), {
+      title: editForm.title.trim(),
+      author: editForm.author.trim()
+    });
+    setBookToEdit(null);
+  };
+
+  const handleSoftDelete = async () => {
+    await updateDoc(doc(db, "books", bookToDelete), { isDeleted: true, deletedAt: new Date() });
+    setBookToDelete(null);
+  };
+
+  const handleFinalDelete = async () => {
+    await deleteDoc(doc(db, "books", bookToPermanentDelete));
+    setBookToPermanentDelete(null);
+  };
+
+  // --- 4. CALCULATIONS ---
+  const totalBooks = books.filter(b => !b.isDeleted).length;
+  const readBooks = books.filter(b => !b.isDeleted && b.isRead).length;
+  const unreadBooks = totalBooks - readBooks;
+  const completionRate = totalBooks > 0 ? Math.round((readBooks / totalBooks) * 100) : 0;
+
+  const filteredBooks = books.filter(b => 
+    !b.isDeleted && ( 
+      b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      b.author.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  });
-  return () => unsubscribe();
-}, [user]);
+  // --- 5. THE BOUNCER ---
+  if (!user) return <AuthView />;
+
   return (
     <div id="app">
       <header className="header-bar">
