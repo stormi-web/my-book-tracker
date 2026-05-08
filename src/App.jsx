@@ -24,6 +24,8 @@ function App() {
   const unreadBooks = totalBooks - readBooks;
   const completionRate = totalBooks > 0 ? Math.round((readBooks / totalBooks) * 100) : 0;
 
+  if (!user) return <AuthView />;
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
