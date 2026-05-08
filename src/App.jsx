@@ -144,6 +144,32 @@ const handlePermanentDelete = async (id) => {
 
       <div className="dashboard-controls">
         <h3>Your Collection ({books.length})</h3>
+        <div className="progress-section" style={{ margin: '15px 10px 25px 10px' }}>
+  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
+    <span style={{ color: 'var(--text-muted)' }}>Library Completion</span>
+    <span style={{ fontWeight: 'bold', color: 'var(--accent-color)' }}>{completionRate}%</span>
+  </div>
+  
+  {/* The Background Bar */}
+  <div style={{ 
+    width: '100%', 
+    background: 'rgba(0,0,0,0.05)', 
+    borderRadius: '20px', 
+    height: '12px',
+    overflow: 'hidden',
+    border: '1px solid rgba(0,0,0,0.03)'
+  }}>
+    {/* The actual Progress Fill */}
+    <div style={{ 
+      width: `${completionRate}%`, 
+      background: 'linear-gradient(90deg, #6366f1, #a855f7)', 
+      height: '100%', 
+      borderRadius: '20px',
+      transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: '0 0 10px rgba(168, 85, 247, 0.4)'
+    }}></div>
+  </div>
+</div>
         <div className="search-container">
           <input 
             type="text" 
@@ -184,15 +210,7 @@ const handlePermanentDelete = async (id) => {
     <h4 style={{ margin: '5px 0' }}>{completionRate}%</h4>
     <small style={{ opacity: 0.8 }}>Finish Rate</small>
   </div>
-  <div style={{ width: '100%', background: '#e0e0e0', borderRadius: '10px', height: '10px', marginTop: '10px' }}>
-  <div style={{ 
-    width: `${completionRate}%`, 
-    background: 'var(--accent-color)', 
-    height: '100%', 
-    borderRadius: '10px',
-    transition: 'width 0.5s ease-in-out' 
-  }}></div>
-</div>
+
 </div>
 
       <div id="book-list">
