@@ -1,9 +1,10 @@
+import AdminView from './components/AdminView';
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase'; 
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { 
   collection, query, where, orderBy, onSnapshot, 
-  addDoc, deleteDoc, doc, updateDoc 
+  addDoc, deleteDoc, doc, updateDoc, getDoc 
 } from "firebase/firestore";
 import AuthView from './components/AuthView';
 
@@ -11,6 +12,7 @@ function App() {
   const [bookToDelete, setBookToDelete] = useState(null); 
   const [showTrash, setShowTrash] = useState(false);     // To show the deleted books list
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [books, setBooks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -23,28 +25,32 @@ function App() {
   const readBooks = books.filter(b => !b.isDeleted && b.isRead).length;
   const unreadBooks = totalBooks - readBooks;
   const completionRate = totalBooks > 0 ? Math.round((readBooks / totalBooks) * 100) : 0;
+  const [view, setView] = useState("library"); 
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      if (currentUser) {
+        // --- DATABASE ADMIN CHECK ---
+        // This looks at the 'users' collection for a doc named after your UID
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (userSnap.exists() && userSnap.data().isAdmin === true) {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (err) {
+          console.error("Error checking admin status:", err);
+          setIsAdmin(false);
+        }
+      }
     });
     return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-  if (!user) return;
-  const q = query(
-    collection(db, "books"),
-    where("userId", "==", user.uid),
-    orderBy("createdAt", "desc")
-  );
-
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  });
-  return () => unsubscribe();
-}, [user]);
-
   // --- CUSTOM EDIT LOGIC ---
 const handleOpenEdit = (book) => {
   setBookToEdit(book);
@@ -123,6 +129,9 @@ const handlePermanentDelete = async (id) => {
 );
 
   if (!user) return <AuthView />;
+  if (view === "admin") {
+  return <AdminView onBack={() => setView("library")} />;
+}
 
   return (
     <div id="app">
@@ -133,6 +142,12 @@ const handlePermanentDelete = async (id) => {
           {showMenu && (
             <div id="dropdown-menu" style={{ display: 'block' }}>
               <div className="menu-user-info">{user.displayName}</div>
+                {isAdmin && (
+      <button onClick={() => { setView("admin"); setShowMenu(false); }}>
+        👑 Admin Panel
+      </button>
+    )}
+
               <button onClick={() => { setShowTrash(true); setShowMenu(false); }}>
                   🗑️ Recently Deleted
             </button>
