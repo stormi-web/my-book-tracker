@@ -1,4 +1,3 @@
-import AdminView from './components/AdminView';
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase'; 
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -7,6 +6,7 @@ import {
   addDoc, deleteDoc, doc, updateDoc, getDoc 
 } from "firebase/firestore";
 import AuthView from './components/AuthView';
+import AdminView from './components/AdminView';
 
 function App() {
   const [bookToDelete, setBookToDelete] = useState(null); 
