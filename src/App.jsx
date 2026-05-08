@@ -3,16 +3,14 @@ import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { 
   collection, query, where, orderBy, onSnapshot, 
-  addDoc, deleteDoc, doc, updateDoc, getDoc 
-} from "firebase/firestore";
+  addDoc, deleteDoc, doc, updateDoc 
+} from "firebase/firestore"; 
 import AuthView from './components/AuthView';
-import AdminView from './components/AdminView';
 
 function App() {
   const [bookToDelete, setBookToDelete] = useState(null); 
   const [showTrash, setShowTrash] = useState(false);     // To show the deleted books list
   const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [books, setBooks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -28,29 +26,11 @@ function App() {
   const [view, setView] = useState("library"); 
 
 useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-    setUser(currentUser);
-    
-    if (currentUser) {
-      const userRef = doc(db, "users", currentUser.uid);
-      const userSnap = await getDoc(userRef);
-      
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        // This will pop up on your screen to tell us what is happening
-        alert("User found in DB! isAdmin is: " + data.isAdmin);
-        
-        if (data.isAdmin === true) {
-          setIsAdmin(true);
-        }
-      } else {
-        // If this pops up, the app can't find your UID in the 'users' collection
-        alert("No user document found for UID: " + currentUser.uid);
-      }
-    }
-  });
-  return () => unsubscribe();
-}, []);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // --- CUSTOM EDIT LOGIC ---
 const handleOpenEdit = (book) => {
@@ -129,16 +109,8 @@ const handlePermanentDelete = async (id) => {
     )
   );
 
- 
-// 1. GUEST CHECK: If not logged in, show Auth
+
   if (!user) return <AuthView />;
-
-  // 2. ADMIN CHECK: If the 'view' state is set to admin, show the Admin Dashboard
-  if (view === "admin") {
-    return <AdminView onBack={() => setView("library")} />;
-  }
-
-  // 3. MAIN LIBRARY: If we are not in admin view, show the user dashboard
   return (
     <div id="app">
       <header className="header-bar">
@@ -148,13 +120,6 @@ const handlePermanentDelete = async (id) => {
           {showMenu && (
             <div id="dropdown-menu" style={{ display: 'block' }}>
               <div className="menu-user-info">{user.displayName}</div>
-              
-              {/* Only show the button if isAdmin is true */}
-              {isAdmin && (
-                <button onClick={() => { setView("admin"); setShowMenu(false); }}>
-                  👑 Admin Panel
-                </button>
-              )}
 
               <button onClick={() => { setShowTrash(true); setShowMenu(false); }}>
                   🗑️ Recently Deleted
