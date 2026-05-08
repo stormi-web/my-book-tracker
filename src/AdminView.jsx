@@ -24,11 +24,19 @@ const AdminView = ({ onBack }) => {
   }, []);
 
   return (
-    <div className="admin-panel" style={{ padding: '20px', color: 'white' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>👑 Admin Dashboard</h2>
-        <button onClick={onBack}>Back to Library</button>
-      </header>
+    <div className="admin-panel" style={{ 
+  padding: '40px 20px', 
+  minHeight: '100vh', 
+  background: '#1a1a2e', // A dark, distinct admin color
+  color: 'white' 
+}}>
+    <div style={{ maxWidth: '800px', margin: '0 auto' }}></div>
+      <header style={{ borderBottom: '2px solid #30363d', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between' }}>
+      <h1>🔐 Admin Control Center</h1>
+      <button onClick={onBack} style={{ background: '#30363d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer' }}>
+        Exit Admin Mode
+      </button>
+    </header>
 
       <div className="analytics-container" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
         <div className="stat-card" style={{ background: 'rgba(255,255,255,0.1)', padding: '20px', borderRadius: '15px' }}>

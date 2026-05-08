@@ -128,10 +128,18 @@ const handlePermanentDelete = async (id) => {
   )
 );
 
-  if (!user) return <AuthView />;
-  if (view === "admin") {
+ 
+if (!user) return <AuthView />;
+
+if (view === "admin") {
   return <AdminView onBack={() => setView("library")} />;
 }
+
+return (
+  <div id="app">
+     {/* Your existing header, search bar, and book list code goes here */}
+  </div>
+);
 
   return (
     <div id="app">
