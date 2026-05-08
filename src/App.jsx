@@ -19,6 +19,10 @@ function App() {
   const [bookToEdit, setBookToEdit] = useState(null); 
   const [editForm, setEditForm] = useState({ title: "", author: "" });
   const [bookToPermanentDelete, setBookToPermanentDelete] = useState(null);
+  const totalBooks = books.filter(b => !b.isDeleted).length;
+  const readBooks = books.filter(b => !b.isDeleted && b.isRead).length;
+  const unreadBooks = totalBooks - readBooks;
+  const completionRate = totalBooks > 0 ? Math.round((readBooks / totalBooks) * 100) : 0;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -148,6 +152,48 @@ const handlePermanentDelete = async (id) => {
           />
         </div>
       </div>
+
+      {/* ANALYTICS SECTION */}
+<div className="analytics-container" style={{
+  display: 'grid', 
+  gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+  gap: '15px', 
+  marginBottom: '20px',
+  padding: '10px'
+}}>
+  <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+    <span style={{ fontSize: '1.5rem' }}>📚</span>
+    <h4 style={{ margin: '5px 0' }}>{totalBooks}</h4>
+    <small style={{ color: 'var(--text-muted)' }}>Total Books</small>
+  </div>
+
+  <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+    <span style={{ fontSize: '1.5rem' }}>✅</span>
+    <h4 style={{ margin: '5px 0' }}>{readBooks}</h4>
+    <small style={{ color: 'var(--text-muted)' }}>Completed</small>
+  </div>
+
+  <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+    <span style={{ fontSize: '1.5rem' }}>⏳</span>
+    <h4 style={{ margin: '5px 0' }}>{unreadBooks}</h4>
+    <small style={{ color: 'var(--text-muted)' }}>To Read</small>
+  </div>
+
+  <div className="stat-card" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', padding: '15px', borderRadius: '12px', textAlign: 'center', color: 'white' }}>
+    <span style={{ fontSize: '1.5rem' }}>📈</span>
+    <h4 style={{ margin: '5px 0' }}>{completionRate}%</h4>
+    <small style={{ opacity: 0.8 }}>Finish Rate</small>
+  </div>
+  <div style={{ width: '100%', background: '#e0e0e0', borderRadius: '10px', height: '10px', marginTop: '10px' }}>
+  <div style={{ 
+    width: `${completionRate}%`, 
+    background: 'var(--accent-color)', 
+    height: '100%', 
+    borderRadius: '10px',
+    transition: 'width 0.5s ease-in-out' 
+  }}></div>
+</div>
+</div>
 
       <div id="book-list">
         {filteredBooks.map(book => (
