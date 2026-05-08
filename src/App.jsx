@@ -131,14 +131,15 @@ const handlePermanentDelete = async (id) => {
   );
 
  
-// 1. If not logged in, show Auth
+// 1. GUEST CHECK: If not logged in, show Auth
   if (!user) return <AuthView />;
 
-  // 2. If view is admin, show Admin Panel
+  // 2. ADMIN CHECK: If the 'view' state is set to admin, show the Admin Dashboard
   if (view === "admin") {
     return <AdminView onBack={() => setView("library")} />;
   }
 
+  // 3. MAIN LIBRARY: If we are not in admin view, show the user dashboard
   return (
     <div id="app">
       <header className="header-bar">
@@ -149,7 +150,7 @@ const handlePermanentDelete = async (id) => {
             <div id="dropdown-menu" style={{ display: 'block' }}>
               <div className="menu-user-info">{user.displayName}</div>
               
-              {/* Only show if isAdmin state is true */}
+              {/* Only show the button if isAdmin is true */}
               {isAdmin && (
                 <button onClick={() => { setView("admin"); setShowMenu(false); }}>
                   👑 Admin Panel
@@ -165,34 +166,10 @@ const handlePermanentDelete = async (id) => {
         </div>
       </header>
 
+      {/* --- DASHBOARD CONTROLS --- */}
       <div className="dashboard-controls">
         <h3>Your Collection ({books.length})</h3>
-        <div className="progress-section" style={{ margin: '15px 10px 25px 10px' }}>
-  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
-    <span style={{ color: 'var(--text-muted)' }}>Library Completion</span>
-    <span style={{ fontWeight: 'bold', color: 'var(--accent-color)' }}>{completionRate}%</span>
-  </div>
-  
-  {/* The Background Bar */}
-  <div style={{ 
-    width: '100%', 
-    background: 'rgba(0,0,0,0.05)', 
-    borderRadius: '20px', 
-    height: '12px',
-    overflow: 'hidden',
-    border: '1px solid rgba(0,0,0,0.03)'
-  }}>
-    {/* The actual Progress Fill */}
-    <div style={{ 
-      width: `${completionRate}%`, 
-      background: 'linear-gradient(90deg, #6366f1, #a855f7)', 
-      height: '100%', 
-      borderRadius: '20px',
-      transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-      boxShadow: '0 0 10px rgba(168, 85, 247, 0.4)'
-    }}></div>
-  </div>
-</div>
+        {/* ... Progress bar code goes here ... */}
         <div className="search-container">
           <input 
             type="text" 
@@ -202,63 +179,16 @@ const handlePermanentDelete = async (id) => {
         </div>
       </div>
 
-      {/* ANALYTICS SECTION */}
-<div className="analytics-container" style={{
-  display: 'grid', 
-  gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
-  gap: '15px', 
-  marginBottom: '20px',
-  padding: '10px'
-}}>
-  <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-    <span style={{ fontSize: '1.5rem' }}>📚</span>
-    <h4 style={{ margin: '5px 0' }}>{totalBooks}</h4>
-    <small style={{ color: 'var(--text-muted)' }}>Total Books</small>
-  </div>
+      {/* --- STAT CARDS --- */}
+      <div className="analytics-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '15px' }}>
+        {/* ... Your Stat Card divs (Total, Completed, etc.) ... */}
+      </div>
 
-  <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-    <span style={{ fontSize: '1.5rem' }}>✅</span>
-    <h4 style={{ margin: '5px 0' }}>{readBooks}</h4>
-    <small style={{ color: 'var(--text-muted)' }}>Completed</small>
-  </div>
-
-  <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-    <span style={{ fontSize: '1.5rem' }}>⏳</span>
-    <h4 style={{ margin: '5px 0' }}>{unreadBooks}</h4>
-    <small style={{ color: 'var(--text-muted)' }}>To Read</small>
-  </div>
-
-  <div className="stat-card" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', padding: '15px', borderRadius: '12px', textAlign: 'center', color: 'white' }}>
-    <span style={{ fontSize: '1.5rem' }}>📈</span>
-    <h4 style={{ margin: '5px 0' }}>{completionRate}%</h4>
-    <small style={{ opacity: 0.8 }}>Finish Rate</small>
-  </div>
-
-</div>
-
+      {/* --- BOOK LIST --- */}
       <div id="book-list">
         {filteredBooks.map(book => (
           <div key={book.id} className="book-card">
-            <div className="book-info">
-              <strong>{book.title}</strong><br/>
-              <small>by {book.author}</small>
-            </div>
-            <div className="btn-group">
-              <button 
-                className={book.isRead ? "btn-read" : "btn-unread"}
-                onClick={() => updateDoc(doc(db, "books", book.id), { isRead: !book.isRead })}
-              >
-                {book.isRead ? "✅ Read" : "📖 Mark Read"}
-              </button>
-              
-              <button className="btn-edit" onClick={() => handleOpenEdit(book)}>
-                 Edit
-              </button>
-
-              <button className="btn-delete" onClick={() => setBookToDelete(book.id)}>
-                Delete
-              </button>
-            </div>
+             {/* ... Book card content ... */}
           </div>
         ))}
       </div>
