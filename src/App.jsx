@@ -27,32 +27,31 @@ function App() {
   const completionRate = totalBooks > 0 ? Math.round((readBooks / totalBooks) * 100) : 0;
   const [view, setView] = useState("library"); 
 
- useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    setUser(currentUser);
+    
+    if (currentUser) {
+      const userRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userRef);
       
-      if (currentUser) {
-        try {
-          // Look for the document in your "users" collection
-          const userRef = doc(db, "users", currentUser.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (userSnap.exists() && userSnap.data().isAdmin === true) {
-            console.log("Admin detected!"); // This helps us debug
-            setIsAdmin(true);
-          } else {
-            setIsAdmin(false);
-          }
-        } catch (err) {
-          console.error("Admin check failed:", err);
-          setIsAdmin(false);
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        // This will pop up on your screen to tell us what is happening
+        alert("User found in DB! isAdmin is: " + data.isAdmin);
+        
+        if (data.isAdmin === true) {
+          setIsAdmin(true);
         }
       } else {
-        setIsAdmin(false);
+        // If this pops up, the app can't find your UID in the 'users' collection
+        alert("No user document found for UID: " + currentUser.uid);
       }
-    });
-    return () => unsubscribe();
-  }, []);
+    }
+  });
+  return () => unsubscribe();
+}, []);
+
   // --- CUSTOM EDIT LOGIC ---
 const handleOpenEdit = (book) => {
   setBookToEdit(book);
