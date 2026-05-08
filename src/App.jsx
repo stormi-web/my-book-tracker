@@ -4,7 +4,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { 
   collection, query, where, orderBy, onSnapshot, 
   addDoc, deleteDoc, doc, updateDoc 
-} from "firebase/firestore"; 
+} from "firebase/firestore";
 import AuthView from './components/AuthView';
 
 function App() {
@@ -23,94 +23,27 @@ function App() {
   const readBooks = books.filter(b => !b.isDeleted && b.isRead).length;
   const unreadBooks = totalBooks - readBooks;
   const completionRate = totalBooks > 0 ? Math.round((readBooks / totalBooks) * 100) : 0;
-  const [view, setView] = useState("library"); 
 
-useEffect(() => {
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
     return () => unsubscribe();
   }, []);
 
-  // --- CUSTOM EDIT LOGIC ---
-const handleOpenEdit = (book) => {
-  setBookToEdit(book);
-  setEditForm({ title: book.title, author: book.author });
-};
-
-const handleSaveEdit = async () => {
-  try {
-    await updateDoc(doc(db, "books", bookToEdit.id), {
-      title: editForm.title.trim(),
-      author: editForm.author.trim()
-    });
-    setBookToEdit(null);
-  } catch (err) {
-    alert("Error: " + err.message);
-  }
-};
-
-// --- PERMANENT DELETE LOGIC ---
-const handleFinalDelete = async () => {
-  try {
-    await deleteDoc(doc(db, "books", bookToPermanentDelete));
-    setBookToPermanentDelete(null);
-  } catch (err) {
-    alert("Error: " + err.message);
-  }
-};
-
-  const handleAddBook = async () => {
-    if (!newBook.title || !newBook.author) return alert("Fill all fields");
-    try {
-      await addDoc(collection(db, "books"), {
-        userId: user.uid,
-        title: newBook.title,
-        author: newBook.author,
-        isRead: false,
-        isDeleted: false,
-        createdAt: new Date()
-      });
-      setNewBook({ title: "", author: "" });
-      setShowModal(false);
-    } catch (err) {
-      alert("Error adding book: " + err.message);
-    }
-  };
-
-const handleSoftDelete = async () => {
-  if (!bookToDelete) return;
-  try {
-    await updateDoc(doc(db, "books", bookToDelete), {
-      isDeleted: true,
-      deletedAt: new Date()
-    });
-    setBookToDelete(null); 
-  } catch (err) {
-    alert("Error moving to trash: " + err.message);
-  }
-};
-
-// --- PERMANENT DELETE LOGIC ---
-const handlePermanentDelete = async (id) => {
-  // Always good to have a second confirmation for permanent actions
-  if (!window.confirm("This will delete the book forever. Are you sure?")) return;
-  try {
-    await deleteDoc(doc(db, "books", id));
-  } catch (err) {
-    alert("Error deleting permanently: " + err.message);
-  }
-};
-
-  const filteredBooks = books.filter(b => 
-    !b.isDeleted && ( 
-      b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      b.author.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+  useEffect(() => {
+  if (!user) return;
+  const q = query(
+    collection(db, "books"),
+    where("userId", "==", user.uid),
+    orderBy("createdAt", "desc")
   );
 
-
-  if (!user) return <AuthView />;
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  });
+  return () => unsubscribe();
+}, [user]);
   return (
     <div id="app">
       <header className="header-bar">
@@ -120,20 +53,43 @@ const handlePermanentDelete = async (id) => {
           {showMenu && (
             <div id="dropdown-menu" style={{ display: 'block' }}>
               <div className="menu-user-info">{user.displayName}</div>
-
               <button onClick={() => { setShowTrash(true); setShowMenu(false); }}>
                   🗑️ Recently Deleted
-              </button>
+            </button>
               <button onClick={() => signOut(auth)}>Logout</button>
             </div>
           )}
         </div>
       </header>
 
-      {/* --- DASHBOARD CONTROLS --- */}
       <div className="dashboard-controls">
         <h3>Your Collection ({books.length})</h3>
-        {/* ... Progress bar code goes here ... */}
+        <div className="progress-section" style={{ margin: '15px 10px 25px 10px' }}>
+  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
+    <span style={{ color: 'var(--text-muted)' }}>Library Completion</span>
+    <span style={{ fontWeight: 'bold', color: 'var(--accent-color)' }}>{completionRate}%</span>
+  </div>
+  
+  {/* The Background Bar */}
+  <div style={{ 
+    width: '100%', 
+    background: 'rgba(0,0,0,0.05)', 
+    borderRadius: '20px', 
+    height: '12px',
+    overflow: 'hidden',
+    border: '1px solid rgba(0,0,0,0.03)'
+  }}>
+    {/* The actual Progress Fill */}
+    <div style={{ 
+      width: `${completionRate}%`, 
+      background: 'linear-gradient(90deg, #6366f1, #a855f7)', 
+      height: '100%', 
+      borderRadius: '20px',
+      transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: '0 0 10px rgba(168, 85, 247, 0.4)'
+    }}></div>
+  </div>
+</div>
         <div className="search-container">
           <input 
             type="text" 
@@ -143,16 +99,62 @@ const handlePermanentDelete = async (id) => {
         </div>
       </div>
 
-      {/* --- STAT CARDS --- */}
-      <div className="analytics-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '15px' }}>
-        {/* ... Your Stat Card divs (Total, Completed, etc.) ... */}
-      </div>
+      {/* ANALYTICS SECTION */}
+<div className="analytics-container" style={{
+  display: 'grid', 
+  gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+  gap: '15px', 
+  marginBottom: '20px',
+  padding: '10px'
+}}>
+  <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+    <span style={{ fontSize: '1.5rem' }}>📚</span>
+    <h4 style={{ margin: '5px 0' }}>{totalBooks}</h4>
+    <small style={{ color: 'var(--text-muted)' }}>Total Books</small>
+  </div>
 
-      {/* --- BOOK LIST --- */}
+  <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+    <span style={{ fontSize: '1.5rem' }}>✅</span>
+    <h4 style={{ margin: '5px 0' }}>{readBooks}</h4>
+    <small style={{ color: 'var(--text-muted)' }}>Completed</small>
+  </div>
+
+  <div className="stat-card" style={{ background: 'var(--card-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+    <span style={{ fontSize: '1.5rem' }}>⏳</span>
+    <h4 style={{ margin: '5px 0' }}>{unreadBooks}</h4>
+    <small style={{ color: 'var(--text-muted)' }}>To Read</small>
+  </div>
+
+  <div className="stat-card" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', padding: '15px', borderRadius: '12px', textAlign: 'center', color: 'white' }}>
+    <span style={{ fontSize: '1.5rem' }}>📈</span>
+    <h4 style={{ margin: '5px 0' }}>{completionRate}%</h4>
+    <small style={{ opacity: 0.8 }}>Finish Rate</small>
+  </div>
+</div>
+
       <div id="book-list">
         {filteredBooks.map(book => (
           <div key={book.id} className="book-card">
-             {/* ... Book card content ... */}
+            <div className="book-info">
+              <strong>{book.title}</strong><br/>
+              <small>by {book.author}</small>
+            </div>
+            <div className="btn-group">
+              <button 
+                className={book.isRead ? "btn-read" : "btn-unread"}
+                onClick={() => updateDoc(doc(db, "books", book.id), { isRead: !book.isRead })}
+              >
+                {book.isRead ? "✅ Read" : "📖 Mark Read"}
+              </button>
+              
+              <button className="btn-edit" onClick={() => handleOpenEdit(book)}>
+                 Edit
+              </button>
+
+              <button className="btn-delete" onClick={() => setBookToDelete(book.id)}>
+                Delete
+              </button>
+            </div>
           </div>
         ))}
       </div>
