@@ -27,26 +27,28 @@ function App() {
   const completionRate = totalBooks > 0 ? Math.round((readBooks / totalBooks) * 100) : 0;
   const [view, setView] = useState("library"); 
 
-  useEffect(() => {
+ useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
       if (currentUser) {
-        // --- DATABASE ADMIN CHECK ---
-        // This looks at the 'users' collection for a doc named after your UID
         try {
+          // Look for the document in your "users" collection
           const userRef = doc(db, "users", currentUser.uid);
           const userSnap = await getDoc(userRef);
           
           if (userSnap.exists() && userSnap.data().isAdmin === true) {
+            console.log("Admin detected!"); // This helps us debug
             setIsAdmin(true);
           } else {
             setIsAdmin(false);
           }
         } catch (err) {
-          console.error("Error checking admin status:", err);
+          console.error("Admin check failed:", err);
           setIsAdmin(false);
         }
+      } else {
+        setIsAdmin(false);
       }
     });
     return () => unsubscribe();
@@ -132,7 +134,7 @@ const handlePermanentDelete = async (id) => {
 if (!user) return <AuthView />;
 
 if (view === "admin") {
-  return <AdminView onBack={() => setView("library")} />;
+  return <div style={{background: 'red', height: '100vh', color: 'white'}}><h1>SWITCH WORKED</h1><button onClick={() => setView("library")}>Go Back</button></div>;
 }
 
 return (
