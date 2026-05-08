@@ -124,24 +124,20 @@ const handlePermanentDelete = async (id) => {
 };
 
   const filteredBooks = books.filter(b => 
-  !b.isDeleted && ( 
-    b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    b.author.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-);
+    !b.isDeleted && ( 
+      b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      b.author.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
 
  
-if (!user) return <AuthView />;
+// 1. If not logged in, show Auth
+  if (!user) return <AuthView />;
 
-if (view === "admin") {
-  return <div style={{background: 'red', height: '100vh', color: 'white'}}><h1>SWITCH WORKED</h1><button onClick={() => setView("library")}>Go Back</button></div>;
-}
-
-return (
-  <div id="app">
-     {/* Your existing header, search bar, and book list code goes here */}
-  </div>
-);
+  // 2. If view is admin, show Admin Panel
+  if (view === "admin") {
+    return <AdminView onBack={() => setView("library")} />;
+  }
 
   return (
     <div id="app">
@@ -152,15 +148,17 @@ return (
           {showMenu && (
             <div id="dropdown-menu" style={{ display: 'block' }}>
               <div className="menu-user-info">{user.displayName}</div>
-                {isAdmin && (
-      <button onClick={() => { setView("admin"); setShowMenu(false); }}>
-        👑 Admin Panel
-      </button>
-    )}
+              
+              {/* Only show if isAdmin state is true */}
+              {isAdmin && (
+                <button onClick={() => { setView("admin"); setShowMenu(false); }}>
+                  👑 Admin Panel
+                </button>
+              )}
 
               <button onClick={() => { setShowTrash(true); setShowMenu(false); }}>
                   🗑️ Recently Deleted
-            </button>
+              </button>
               <button onClick={() => signOut(auth)}>Logout</button>
             </div>
           )}
